@@ -323,22 +323,9 @@ def render_app() -> None:
             st.subheader("🛒 Shopping List & Recipe")
             st.markdown("*Everything you need, nothing you don't*")
 
-            # Filter and rename for user-friendly display
-            recipe_items = {}
-            for ingredient, weight in main_dough_df['Weight (g)'].items():
-                if weight > 1:  # Only show meaningful amounts
-                    if ingredient == "Strong White flour":
-                        recipe_items["Strong white bread flour"] = weight
-                    elif ingredient == "Flour 2" and weight > 0:
-                        recipe_items[f"Alternative flour ({flour2_pct:.0f}% of total)"] = weight
-                    elif ingredient == "Sourdough discard":
-                        recipe_items["Sourdough discard (100% hydration)"] = weight
-                    elif ingredient == "Pre-ferment":
-                        recipe_items["Pre-ferment (prepare night before)"] = weight
-                    elif ingredient == "Barley Malt Extract" and weight > 0:
-                        recipe_items["Barley malt extract (or honey)"] = weight
-                    else:
-                        recipe_items[ingredient] = weight
+            # Filter and rename for user-friendly display (cached)
+            main_items = tuple(main_dough_df['Weight (g)'].items())
+            recipe_items = build_recipe_items(main_items, flour2_pct, flour3_pct)
 
             # Display in a clean, printable format
             for ingredient, weight in recipe_items.items():
