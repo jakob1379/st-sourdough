@@ -94,6 +94,256 @@ def build_total_display(items: tuple[tuple[str, float, float], ...]) -> pd.DataF
     return df
 
 
+def _render_tab1(
+    main_dough_df: pd.DataFrame,
+    flour2_pct: float,
+    flour3_pct: float,
+    water_pct: float,
+    salt_pct: float,
+    sourdough_discard_pct: float,
+    preferment_pct: float,
+    preferment_total_weight: float,
+) -> None:
+    """Render the simplified, user-facing recipe (Tab 1)."""
+    if not main_dough_df.empty:
+        st.success(f"🎉 **Your recipe is ready!** Total dough weight: **{main_dough_df['Weight (g)'].sum():.0f}g**")
+
+        # Key metrics with helpful context
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("💧 Hydration", f"{water_pct}%", help="Perfect for sandwich bread texture")
+        with col2:
+            st.metric("🧂 Salt", f"{salt_pct}%", help="Balanced flavor enhancement")
+        with col3:
+            st.metric("♻️ Discard Used", f"{sourdough_discard_pct:.0f}%", help="Waste nothing, gain flavor!")
+        with col4:
+            st.metric("⏰ Pre-ferment", f"{preferment_pct:.0f}%", help="Complex artisan flavors")
+
+        st.markdown("---")
+
+        # Preparation timeline
+        st.subheader("📅 Your Baking Schedule")
+        st.info(f"""
+        **Tonight (5 minutes):** Make your pre-ferment ({preferment_total_weight:.0f}g total)
+
+        **Tomorrow morning:** Start mixing your dough - total process is about 5-6 hours
+
+        **Fresh bread by afternoon!** Perfect timing for dinner or next day's sandwiches
+        """)
+
+        st.markdown("---")
+
+        # Simple shopping list view
+        st.subheader("🛒 Shopping List & Recipe")
+        st.markdown("*Everything you need, nothing you don't*")
+
+        # Filter and rename for user-friendly display (cached)
+        main_items = tuple(main_dough_df['Weight (g)'].items())
+        recipe_items = build_recipe_items(main_items, flour2_pct, flour3_pct)
+
+        # Display in a clean, printable format
+        for ingredient, weight in recipe_items.items():
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.write(f"**{ingredient}**")
+            with col2:
+                st.write(f"**{weight:.0f}g**")
+
+        # Pro tips section
+        st.markdown("---")
+        st.subheader("🏆 Pro Tips for Success")
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown("""
+            **🎯 For Best Results**:
+             - Use bread flour with 12%+ protein
+             - Room temperature water mixes easier
+             - Don't rush the bulk fermentation
+             - Score your loaf for even baking
+            """)
+
+        with col2:
+            st.markdown("""
+            **🔧 Troubleshooting:**
+             - Dough too sticky? Use wet hands, not more flour
+             - Slow rise? Find a warmer spot (22-25°C ideal)
+             - Want more sourness? Use older discard
+             - Dense bread? Check your starter is active
+            """)
+    else:
+        st.error("⚠️ Unable to calculate recipe. Please check your input values in the sidebar.")
+
+
+def _render_tab2(main_dough_df: pd.DataFrame, ferments_data: FermentsData) -> None:
+    """Render the Recipe Details tab (Tab 2)."""
+    if not main_dough_df.empty:
+        st.subheader("📊 Complete Recipe Breakdown")
+        st.markdown("*Perfect for experienced bakers who want to understand the full process*")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("**🏠 Final Dough Assembly**")
+            st.markdown("*Mix these together on baking day*")
+            display_df = main_dough_df.copy()
+            display_df['Weight (g)'] = display_df['Weight (g)'].round(1)
+            st.dataframe(
+                display_df,
+                use_container_width=True,
+                hide_index=False
+            )
+
+            total_weight = display_df['Weight (g)'].sum()
+            st.metric("Total dough weight", f"{total_weight:.0f}g")
+
+            st.markdown("**⏱️ Timeline Estimate**")
+            st.markdown("""
+            - **Mixing:** 10 minutes
+            - **Bulk fermentation:** 4-5 hours
+            - **Shaping & final proof:** 1-2 hours
+            - **Baking:** 35-45 minutes
+            """)
+
+        with col2:
+            st.markdown("**🧪 Ferment Preparation Guide**")
+            st.markdown("*Prepare these components separately*")
+
+            for ferment_name, ingredients in ferments_data.items():
+                # Use cached helper to turn ferment dict into a small DataFrame for display
+                items_tuple = tuple(ingredients.items())
+                df = ferment_df_from_items(items_tuple)
+                if not df.empty:
+                    with st.container():
+                        if ferment_name == "Sourdough discard":
+                            st.markdown(f"**{ferment_name}** *(use directly from fridge)*")
+                            st.caption("Your regular sourdough discard at 100% hydration")
+                        else:
+                            st.markdown(f"**{ferment_name}** *(make night before)*")
+                            st.caption("Mix and ferment 8-12 hours at room temperature")
+
+                        # Display the ferment components and total from the cached DataFrame
+                        st.dataframe(df.style.format("{:.0f}g"), use_container_width=True)
+                        st.write("")
+
+            st.markdown("**🌡️ Temperature Guide**")
+            st.info("""
+            **Kitchen 18-20°C:** Add 1-2 hours to all times
+            **Kitchen 20-23°C:** Perfect - follow timing exactly
+            **Kitchen 24-27°C:** Subtract 1 hour, watch carefully
+            **Kitchen 28°C+:** Consider cooler location or less yeast
+            """)
+
+
+def _render_tab3(
+    total_ingredients_df: pd.DataFrame,
+    ferments_data: FermentsData,
+    pre_fermented_flour: float,
+    scale: float,
+    total_flour_weight: float,
+    water_pct: float,
+    flour2_pct: float,
+    flour3_pct: float,
+) -> None:
+    """Render the Technical View tab (Tab 3)."""
+    if not total_ingredients_df.empty:
+        st.subheader("🔬 Baker's Percentages & Technical Analysis")
+        st.markdown("*For bakers who want to understand and modify the formula*")
+
+        with st.expander("📚 Understanding Baker's Percentages", expanded=False):
+            st.markdown("""
+            Baker's percentages express each ingredient as a percentage of the total flour weight (always 100%).
+            This system lets you:
+            - **Scale recipes easily** - double the percentages, double the recipe
+            - **Compare formulas** - see how different breads relate
+            - **Adjust confidently** - know the impact of changes
+
+            **Example:** 72% hydration means 72g water per 100g flour
+            """)
+
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.markdown("**📋 Master Formula**")
+            st.caption("*Total ingredient breakdown*")
+
+            # Prepare hashable items and use cached builder for consistent display
+            items = tuple(
+                (idx, row["Baker's %"], row["Weight (g)"])
+                for idx, row in total_ingredients_df.iterrows()
+            )
+            display_total = build_total_display(items)
+
+            st.dataframe(
+                display_total.style.format({
+                    "Baker's %": "{:.1f}%",
+                    "Weight (g)": "{:.1f}g"
+                }),
+                use_container_width=True
+            )
+
+        with col2:
+            st.markdown("**🔬 Ferment Analysis**")
+            st.caption("*Component breakdown*")
+            for ferment_name, ingredients in ferments_data.items():
+                st.markdown(f"*{ferment_name}:*")
+                df = pd.DataFrame.from_dict(
+                    ingredients, orient="index", columns=["Weight (g)"]
+                )
+                df = df[df['Weight (g)'] > 0.1]
+                if not df.empty:
+                    df.loc["Total"] = df["Weight (g)"].sum()
+                    st.dataframe(
+                        df.style.format("{:.1f}g"),
+                        use_container_width=True
+                    )
+                st.write("")
+
+        with col3:
+            st.markdown("**📊 Key Metrics**")
+            st.caption("*Formula characteristics*")
+            st.metric("Pre-fermented flour", f"{pre_fermented_flour:.1f}g")
+            st.metric("Scale factor", f"{scale}")
+            st.metric("Total flour", f"{total_flour_weight:.0f}g")
+            st.metric("Effective hydration", f"{water_pct:.1f}%")
+
+            # Show flour breakdown
+            st.markdown("**🌾 Flour composition:**")
+            strong_flour_pct = 100.0 - flour2_pct - flour3_pct
+            st.write(f"• Strong white: {strong_flour_pct:.1f}%")
+            if flour2_pct > 0:
+                st.write(f"• Alternative: {flour2_pct:.1f}%")
+            if flour3_pct > 0:
+                st.write(f"• Third flour: {flour3_pct:.1f}%")
+
+        st.markdown("---")
+
+        # Formula modification guide
+        st.markdown("**🎛️ Formula Modification Guide**")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("""
+            **Common Adjustments:**
+            - **More open crumb:** +5% hydration
+            - **Tighter crumb:** -5% hydration
+            - **More sour:** +10% discard, -10% pre-ferment
+            - **Faster rise:** +0.2% commercial yeast
+            - **Slower rise:** -0.2% commercial yeast
+            """)
+
+        with col2:
+            st.markdown("""
+            **Safety Limits:**
+            - **Hydration:** 60-85% for this style
+            - **Salt:** 1.5-2.5% (never less than 1.5%)
+            - **Yeast:** 0.2-1.0% (more = commercial flavor)
+            - **Alternative flours:** Max 30% total
+            - **Inclusions:** Max 15% total weight
+            """)
+
+
+
 def render_app() -> None:
     """Render the Streamlit UI for the sourdough calculator.
 
@@ -125,8 +375,14 @@ def render_app() -> None:
     # Toggle for advanced mode
     col1, col2 = st.columns([3, 1])
     with col2:
-        if st.button("⚙️ Advanced Settings" if not st.session_state.show_advanced else "📝 Simple Mode"):
+        def _toggle_advanced():
             st.session_state.show_advanced = not st.session_state.show_advanced
+
+        st.button(
+            "⚙️ Advanced Settings" if not st.session_state.show_advanced else "📝 Simple Mode",
+            key="toggle_advanced",
+            on_click=_toggle_advanced,
+        )
 
     # Main interface with tabs
     tab1, tab2, tab3 = st.tabs(["🥖 Your Recipe", "📊 Recipe Details", "🔬 Technical View"])
@@ -311,232 +567,34 @@ def render_app() -> None:
 
     # Tab 1: Simple Recipe View
     with tab1:
-        if not main_dough_df.empty:
-            st.success(f"🎉 **Your recipe is ready!** Total dough weight: **{main_dough_df['Weight (g)'].sum():.0f}g**")
-
-            # Key metrics with helpful context
-            col1, col2, col3, col4 = st.columns(4)
-            with col1:
-                st.metric("💧 Hydration", f"{water_pct}%", help="Perfect for sandwich bread texture")
-            with col2:
-                st.metric("🧂 Salt", f"{salt_pct}%", help="Balanced flavor enhancement")
-            with col3:
-                st.metric("♻️ Discard Used", f"{sourdough_discard_pct:.0f}%", help="Waste nothing, gain flavor!")
-            with col4:
-                st.metric("⏰ Pre-ferment", f"{preferment_pct:.0f}%", help="Complex artisan flavors")
-
-            st.markdown("---")
-
-            # Preparation timeline
-            st.subheader("📅 Your Baking Schedule")
-            st.info(f"""
-            **Tonight (5 minutes):** Make your pre-ferment ({preferment_total_weight:.0f}g total)
-
-            **Tomorrow morning:** Start mixing your dough - total process is about 5-6 hours
-
-            **Fresh bread by afternoon!** Perfect timing for dinner or next day's sandwiches
-            """)
-
-            st.markdown("---")
-
-            # Simple shopping list view
-            st.subheader("🛒 Shopping List & Recipe")
-            st.markdown("*Everything you need, nothing you don't*")
-
-            # Filter and rename for user-friendly display (cached)
-            main_items = tuple(main_dough_df['Weight (g)'].items())
-            recipe_items = build_recipe_items(main_items, flour2_pct, flour3_pct)
-
-            # Display in a clean, printable format
-            for ingredient, weight in recipe_items.items():
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(f"**{ingredient}**")
-                with col2:
-                    st.write(f"**{weight:.0f}g**")
-
-            # Pro tips section
-            st.markdown("---")
-            st.subheader("🏆 Pro Tips for Success")
-
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("""
-                **🎯 For Best Results**:
-                 - Use bread flour with 12%+ protein
-                 - Room temperature water mixes easier
-                 - Don't rush the bulk fermentation
-                 - Score your loaf for even baking
-                """
-                )
-
-            with col2:
-                st.markdown("""
-                **🔧 Troubleshooting:**
-                 - Dough too sticky? Use wet hands, not more flour
-                 - Slow rise? Find a warmer spot (22-25°C ideal)
-                 - Want more sourness? Use older discard
-                 - Dense bread? Check your starter is active
-                """
-                )
-
-        else:
-            st.error("⚠️ Unable to calculate recipe. Please check your input values in the sidebar.")
+        _render_tab1(
+            main_dough_df=
+            main_dough_df,
+            flour2_pct=flour2_pct,
+            flour3_pct=flour3_pct,
+            water_pct=water_pct,
+            salt_pct=salt_pct,
+            sourdough_discard_pct=sourdough_discard_pct,
+            preferment_pct=preferment_pct,
+            preferment_total_weight=preferment_total_weight,
+        )
 
     # Tab 2: Recipe Details
     with tab2:
-        if not main_dough_df.empty:
-            st.subheader("📊 Complete Recipe Breakdown")
-            st.markdown("*Perfect for experienced bakers who want to understand the full process*")
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.markdown("**🏠 Final Dough Assembly**")
-                st.markdown("*Mix these together on baking day*")
-                display_df = main_dough_df.copy()
-                display_df['Weight (g)'] = display_df['Weight (g)'].round(1)
-                st.dataframe(
-                    display_df,
-                    use_container_width=True,
-                    hide_index=False
-                )
-
-                total_weight = display_df['Weight (g)'].sum()
-                st.metric("Total dough weight", f"{total_weight:.0f}g")
-
-                st.markdown("**⏱️ Timeline Estimate**")
-                st.markdown("""
-                - **Mixing:** 10 minutes
-                - **Bulk fermentation:** 4-5 hours
-                - **Shaping & final proof:** 1-2 hours
-                - **Baking:** 35-45 minutes
-                """)
-
-            with col2:
-                st.markdown("**🧪 Ferment Preparation Guide**")
-                st.markdown("*Prepare these components separately*")
-
-                for ferment_name, ingredients in ferments_data.items():
-                    if any(v > 1 for v in ingredients.values()):  # Only show if meaningful amounts
-                        with st.container():
-                            if ferment_name == "Sourdough discard":
-                                st.markdown(f"**{ferment_name}** *(use directly from fridge)*")
-                                st.caption("Your regular sourdough discard at 100% hydration")
-                            else:
-                                st.markdown(f"**{ferment_name}** *(make night before)*")
-                                st.caption("Mix and ferment 8-12 hours at room temperature")
-
-                            for ing_name, weight in ingredients.items():
-                                if weight > 1:
-                                    st.write(f"• {ing_name}: **{weight:.0f}g**")
-                            st.write(f"*Total: {sum(ingredients.values()):.0f}g*")
-                            st.write("")
-
-                st.markdown("**🌡️ Temperature Guide**")
-                st.info("""
-                **Kitchen 18-20°C:** Add 1-2 hours to all times
-                **Kitchen 20-23°C:** Perfect - follow timing exactly
-                **Kitchen 24-27°C:** Subtract 1 hour, watch carefully
-                **Kitchen 28°C+:** Consider cooler location or less yeast
-                """)
+        _render_tab2(main_dough_df=main_dough_df, ferments_data=ferments_data)
 
     # Tab 3: Technical View
     with tab3:
-        if not total_ingredients_df.empty:
-            st.subheader("🔬 Baker's Percentages & Technical Analysis")
-            st.markdown("*For bakers who want to understand and modify the formula*")
-
-            # Educational content
-            with st.expander("📚 Understanding Baker's Percentages", expanded=False):
-                st.markdown("""
-                Baker's percentages express each ingredient as a percentage of the total flour weight (always 100%).
-                This system lets you:
-                - **Scale recipes easily** - double the percentages, double the recipe
-                - **Compare formulas** - see how different breads relate
-                - **Adjust confidently** - know the impact of changes
-
-                **Example:** 72% hydration means 72g water per 100g flour
-                """)
-
-            col1, col2, col3 = st.columns(3)
-
-            with col1:
-                st.markdown("**📋 Master Formula**")
-                st.caption("*Total ingredient breakdown*")
-                display_total = total_ingredients_df.copy()
-                display_total = display_total[display_total['Weight (g)'] > 0.1]
-                display_total.loc["Total"] = [
-                    display_total["Baker's %"].sum(),
-                    display_total["Weight (g)"].sum(),
-                ]
-                st.dataframe(
-                    display_total.style.format({
-                        "Baker's %": "{:.1f}%",
-                        "Weight (g)": "{:.1f}g"
-                    }),
-                    use_container_width=True
-                )
-
-            with col2:
-                st.markdown("**🔬 Ferment Analysis**")
-                st.caption("*Component breakdown*")
-                for ferment_name, ingredients in ferments_data.items():
-                    st.markdown(f"*{ferment_name}:*")
-                    df = pd.DataFrame.from_dict(
-                        ingredients, orient="index", columns=["Weight (g)"]
-                    )
-                    df = df[df['Weight (g)'] > 0.1]
-                    if not df.empty:
-                        df.loc["Total"] = df["Weight (g)"].sum()
-                        st.dataframe(
-                            df.style.format("{:.1f}g"),
-                            use_container_width=True
-                        )
-                    st.write("")
-
-            with col3:
-                st.markdown("**📊 Key Metrics**")
-                st.caption("*Formula characteristics*")
-                st.metric("Pre-fermented flour", f"{pre_fermented_flour:.1f}g")
-                st.metric("Scale factor", f"{scale}")
-                st.metric("Total flour", f"{total_flour_weight:.0f}g")
-                st.metric("Effective hydration", f"{water_pct:.1f}%")
-
-                # Show flour breakdown
-                st.markdown("**🌾 Flour composition:**")
-                strong_flour_pct = 100.0 - flour2_pct - flour3_pct
-                st.write(f"• Strong white: {strong_flour_pct:.1f}%")
-                if flour2_pct > 0:
-                    st.write(f"• Alternative: {flour2_pct:.1f}%")
-                if flour3_pct > 0:
-                    st.write(f"• Third flour: {flour3_pct:.1f}%")
-
-            st.markdown("---")
-
-            # Formula modification guide
-            st.markdown("**🎛️ Formula Modification Guide**")
-            col1, col2 = st.columns(2)
-
-            with col1:
-                st.markdown("""
-                **Common Adjustments:**
-                - **More open crumb:** +5% hydration
-                - **Tighter crumb:** -5% hydration
-                - **More sour:** +10% discard, -10% pre-ferment
-                - **Faster rise:** +0.2% commercial yeast
-                - **Slower rise:** -0.2% commercial yeast
-                """)
-
-            with col2:
-                st.markdown("""
-                **Safety Limits:**
-                - **Hydration:** 60-85% for this style
-                - **Salt:** 1.5-2.5% (never less than 1.5%)
-                - **Yeast:** 0.2-1.0% (more = commercial flavor)
-                - **Alternative flours:** Max 30% total
-                - **Inclusions:** Max 15% total weight
-                """)
+        _render_tab3(
+            total_ingredients_df=total_ingredients_df,
+            ferments_data=ferments_data,
+            pre_fermented_flour=pre_fermented_flour,
+            scale=scale,
+            total_flour_weight=total_flour_weight,
+            water_pct=water_pct,
+            flour2_pct=flour2_pct,
+            flour3_pct=flour3_pct,
+        )
 
     # Footer with attribution and helpful links
     st.markdown("---")
