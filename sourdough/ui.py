@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple
-
 import streamlit as st
 import pandas as pd
 from sourdough.calculations import calculate_recipe
@@ -244,7 +242,9 @@ def render_app() -> None:
             st.subheader("📅 Your Baking Schedule")
             st.info(f"""
             **Tonight (5 minutes):** Make your pre-ferment ({preferment_total_weight:.0f}g total)
+
             **Tomorrow morning:** Start mixing your dough - total process is about 5-6 hours
+
             **Fresh bread by afternoon!** Perfect timing for dinner or next day's sandwiches
             """)
 
@@ -286,21 +286,21 @@ def render_app() -> None:
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown("""
-                **🎯 For Best Results:"
-                "- Use bread flour with 12%+ protein
-                "- Room temperature water mixes easier
-                "- Don't rush the bulk fermentation
-                "- Score your loaf for even baking
+                **🎯 For Best Results**:
+                 - Use bread flour with 12%+ protein
+                 - Room temperature water mixes easier
+                 - Don't rush the bulk fermentation
+                 - Score your loaf for even baking
                 """
                 )
 
             with col2:
                 st.markdown("""
-                **🔧 Troubleshooting:"
-                "- Dough too sticky? Use wet hands, not more flour
-                "- Slow rise? Find a warmer spot (22-25°C ideal)
-                "- Want more sourness? Use older discard
-                "- Dense bread? Check your starter is active
+                **🔧 Troubleshooting:**
+                 - Dough too sticky? Use wet hands, not more flour
+                 - Slow rise? Find a warmer spot (22-25°C ideal)
+                 - Want more sourness? Use older discard
+                 - Dense bread? Check your starter is active
                 """
                 )
 

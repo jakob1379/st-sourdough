@@ -11,7 +11,7 @@ Quickstart
 
 1. Install dependencies (Python >= 3.13):
 
-   pip install -r requirements.txt
+   uv sync
 
    or using pyproject.toml with a modern installer.
 
@@ -34,4 +34,3 @@ Open a pull request with changes. Keep UI and calculation logic separated.
 Credits
 
 This calculator is based on the original formula and interface by Culinary Exploration (https://www.culinaryexploration.eu/). Please credit Culinary Exploration as the author of the original calculator when reusing or publishing derivatives.
-

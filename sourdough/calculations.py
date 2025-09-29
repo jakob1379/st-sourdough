@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import Dict, Tuple
-
 import pandas as pd
+
+# Type aliases using built-in generics (Python 3.9+ / 3.13)
+FermentBreakdown = dict[str, float]
+FermentsData = dict[str, FermentBreakdown]
 
 
 def calculate_recipe(
@@ -23,7 +25,7 @@ def calculate_recipe(
     preferment_flour_pct: float,
     preferment_water_pct: float,
     preferment_yeast_pct: float,
-) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, Dict[str, float]], float, float, float]:
+) -> tuple[pd.DataFrame, pd.DataFrame, FermentsData, float, float, float]:
     """Calculate recipe weights based on user inputs and baker's math.
 
     Parameters
@@ -78,7 +80,7 @@ def calculate_recipe(
     if total_bakers_pct == 0:
         return pd.DataFrame(), pd.DataFrame(), {}, 0.0, 0.0, 0.0
 
-    ingredient_weights: Dict[str, float] = {
+    ingredient_weights: dict[str, float] = {
         name: (dough_weight / total_bakers_pct) * pct * scale
         for name, pct in bakers_pcts.items()
     }
