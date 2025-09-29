@@ -8,3 +8,10 @@ dependencies = [
     "pandas>=2.3.2",
     "streamlit>=1.50.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
+    "ty>=0.0.1a21",
+]

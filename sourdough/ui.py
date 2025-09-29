@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 import pandas as pd
+from pathlib import Path
 from sourdough.calculations import calculate_recipe, FermentsData
 
 # Cached wrappers for expensive or repeatable computations
@@ -353,7 +354,18 @@ def render_app() -> None:
     - "Recipe Details" (detailed breakdown)
     - "Technical View" (baker's percentages and analysis)
     """
+
+    # Page configuration must be called before other Streamlit calls
     st.set_page_config(layout="wide", page_title="Sourdough Recipe Calculator")
+
+    # Show header banner image if present in repo root
+    img_path = Path(__file__).resolve().parent.parent / "bread.png"
+    if img_path.exists():
+        try:
+            st.image(str(img_path), use_column_width=True, caption="Fresh sourdough — bake with love 🍞")
+        except Exception:
+            # Keep app resilient if Streamlit can't render the image for any reason
+            pass
 
     # Initialize session state for advanced mode
     if 'show_advanced' not in st.session_state:

@@ -91,7 +91,7 @@ def test_build_total_display_filters_small_weights_and_empty():
 
 
 def test_get_recipe_cached_matches_calculate_recipe():
-    kwargs = dict(
+    expected = calculate_recipe(
         dough_weight=900.0,
         sourdough_discard_pct=30.0,
         preferment_pct=30.0,
@@ -110,9 +110,25 @@ def test_get_recipe_cached_matches_calculate_recipe():
         preferment_water_pct=100.0,
         preferment_yeast_pct=1.0,
     )
-
-    expected = calculate_recipe(**kwargs)
-    cached = ui.get_recipe_cached(**kwargs)
+    cached = ui.get_recipe_cached(
+        dough_weight=900.0,
+        sourdough_discard_pct=30.0,
+        preferment_pct=30.0,
+        scale=1.0,
+        flour2_pct=15.0,
+        flour3_pct=0.0,
+        water_pct=72.0,
+        salt_pct=2.0,
+        yeast_pct=0.5,
+        barley_malt_pct=3.0,
+        inclusion2_pct=0.0,
+        inclusion3_pct=0.0,
+        discard_flour_pct=100.0,
+        discard_water_pct=100.0,
+        preferment_flour_pct=100.0,
+        preferment_water_pct=100.0,
+        preferment_yeast_pct=1.0,
+    )
 
     # Compare dataframes by sums and ferments by keys/values
     assert expected[0]["Weight (g)"].sum() == pytest.approx(cached[0]["Weight (g)"].sum())
