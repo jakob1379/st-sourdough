@@ -358,14 +358,6 @@ def render_app() -> None:
     # Page configuration must be called before other Streamlit calls
     st.set_page_config(layout="wide", page_title="Sourdough Recipe Calculator")
 
-    # Show header banner image if present in repo root
-    img_path = Path(__file__).resolve().parent.parent / "bread.png"
-    if img_path.exists():
-        try:
-            st.image(str(img_path), use_column_width=True, caption="Fresh sourdough — bake with love 🍞")
-        except Exception:
-            # Keep app resilient if Streamlit can't render the image for any reason
-            pass
 
     # Initialize session state for advanced mode
     if 'show_advanced' not in st.session_state:
@@ -451,6 +443,7 @@ def render_app() -> None:
             format="%.0f%%",
             help="Pre-fermentation develops complex flavors and improves texture. 30% creates the perfect balance - your bread will taste like it came from an artisan bakery!"
         )
+
 
         # Advanced settings - collapsible
         if st.session_state.show_advanced:
