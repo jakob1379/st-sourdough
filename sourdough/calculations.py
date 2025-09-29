@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from typing import Dict, Tuple
+
 import pandas as pd
 
 
@@ -19,8 +23,43 @@ def calculate_recipe(
     preferment_flour_pct: float,
     preferment_water_pct: float,
     preferment_yeast_pct: float,
-) -> tuple:
-    """Calculate recipe weights based on user inputs and baker's math."""
+) -> Tuple[pd.DataFrame, pd.DataFrame, Dict[str, Dict[str, float]], float, float, float]:
+    """Calculate recipe weights based on user inputs and baker's math.
+
+    Parameters
+    ----------
+    dough_weight:
+        Target dough weight in grams.
+    sourdough_discard_pct:
+        Percentage of total flour intended as sourdough discard (0-100).
+    preferment_pct:
+        Percentage of total flour intended as pre-ferment (0-100).
+    scale:
+        Recipe scale multiplier (1.0 = no scaling).
+    flour2_pct, flour3_pct:
+        Percentages of alternative flours (rest becomes strong white flour).
+    water_pct, salt_pct, yeast_pct, barley_malt_pct, inclusion2_pct, inclusion3_pct:
+        Baker's percentages for respective ingredients relative to total flour.
+    discard_flour_pct, discard_water_pct:
+        Composition of the sourdough discard (baker's sum ratios).
+    preferment_flour_pct, preferment_water_pct, preferment_yeast_pct:
+        Composition of the pre-ferment (baker's sum ratios).
+
+    Returns
+    -------
+    total_ingredients_df:
+        DataFrame of all formula components with baker's % and weight in grams.
+    main_dough_df:
+        DataFrame for the final dough assembly with weights in grams.
+    ferments_data:
+        Dict containing breakdowns for 'Sourdough discard' and 'Pre-ferment'.
+    pre_fermented_flour:
+        Total flour (g) present in ferment components.
+    sourdough_discard_total_weight:
+        Total weight (g) of the sourdough discard component.
+    preferment_total_weight:
+        Total weight (g) of the pre-ferment component.
+    """
 
     strong_white_flour_pct = 100.0 - flour2_pct - flour3_pct
     bakers_pcts = {
@@ -39,7 +78,7 @@ def calculate_recipe(
     if total_bakers_pct == 0:
         return pd.DataFrame(), pd.DataFrame(), {}, 0.0, 0.0, 0.0
 
-    ingredient_weights = {
+    ingredient_weights: Dict[str, float] = {
         name: (dough_weight / total_bakers_pct) * pct * scale
         for name, pct in bakers_pcts.items()
     }
@@ -58,8 +97,8 @@ def calculate_recipe(
         discard_flour_weight = (sourdough_discard_total_weight / discard_bakers_sum) * discard_flour_pct
         discard_water_weight = (sourdough_discard_total_weight / discard_bakers_sum) * discard_water_pct
     else:
-        discard_flour_weight = 0
-        discard_water_weight = 0
+        discard_flour_weight = 0.0
+        discard_water_weight = 0.0
 
     preferment_bakers_sum = preferment_flour_pct + preferment_water_pct + preferment_yeast_pct
     if preferment_bakers_sum > 0:
@@ -67,24 +106,24 @@ def calculate_recipe(
         preferment_water_weight = (preferment_total_weight / preferment_bakers_sum) * preferment_water_pct
         preferment_yeast_weight = (preferment_total_weight / preferment_bakers_sum) * preferment_yeast_pct
     else:
-        preferment_flour_weight = 0
-        preferment_water_weight = 0
-        preferment_yeast_weight = 0
+        preferment_flour_weight = 0.0
+        preferment_water_weight = 0.0
+        preferment_yeast_weight = 0.0
 
     pre_fermented_flour = discard_flour_weight + preferment_flour_weight
 
     main_dough = {
-        "Strong White flour": ingredient_weights.get("Strong white flour", 0) - discard_flour_weight - preferment_flour_weight,
-        "Flour 2": ingredient_weights.get("Flour 2", 0),
-        "Flour 3": ingredient_weights.get("Flour 3", 0),
-        "Water": ingredient_weights.get("Water", 0) - discard_water_weight - preferment_water_weight,
-        "Salt": ingredient_weights.get("Salt", 0),
+        "Strong White flour": ingredient_weights.get("Strong white flour", 0.0) - discard_flour_weight - preferment_flour_weight,
+        "Flour 2": ingredient_weights.get("Flour 2", 0.0),
+        "Flour 3": ingredient_weights.get("Flour 3", 0.0),
+        "Water": ingredient_weights.get("Water", 0.0) - discard_water_weight - preferment_water_weight,
+        "Salt": ingredient_weights.get("Salt", 0.0),
         "Sourdough discard": sourdough_discard_total_weight,
         "Pre-ferment": preferment_total_weight,
-        "Yeast": ingredient_weights.get("Yeast", 0) - preferment_yeast_weight,
-        "Barley Malt Extract": ingredient_weights.get("Barley Malt Extract", 0),
-        "Inclusion 2": ingredient_weights.get("Inclusion 2", 0),
-        "Inclusion 3": ingredient_weights.get("Inclusion 3", 0),
+        "Yeast": ingredient_weights.get("Yeast", 0.0) - preferment_yeast_weight,
+        "Barley Malt Extract": ingredient_weights.get("Barley Malt Extract", 0.0),
+        "Inclusion 2": ingredient_weights.get("Inclusion 2", 0.0),
+        "Inclusion 3": ingredient_weights.get("Inclusion 3", 0.0),
     }
     main_dough = {k: v for k, v in main_dough.items() if v > 1e-9}
 

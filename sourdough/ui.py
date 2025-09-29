@@ -1,10 +1,21 @@
+from __future__ import annotations
+
+from typing import Dict, Tuple
+
 import streamlit as st
 import pandas as pd
 from sourdough.calculations import calculate_recipe
 
 
-def render_app():
-    """Render the Streamlit UI for the sourdough calculator."""
+def render_app() -> None:
+    """Render the Streamlit UI for the sourdough calculator.
+
+    This function is intended to be the entry point called by Streamlit (``streamlit run main.py``).
+    It builds the sidebar inputs, handles the advanced/simple mode toggle and renders three main tabs:
+    - "Your Recipe" (simple view)
+    - "Recipe Details" (detailed breakdown)
+    - "Technical View" (baker's percentages and analysis)
+    """
     st.set_page_config(layout="wide", page_title="Sourdough Recipe Calculator")
 
     # Initialize session state for advanced mode
@@ -115,9 +126,6 @@ def render_app():
                     format="%.2f",
                     help="Adds deep, malty sweetness and improves crust color. You can substitute with honey (use half the amount) or molasses for different flavors."
                 )
-
-            with st.expander("🌾 Flour Blend Customization", expanded=False):
-                st.markdown("*Experiment with different flour types for unique flavors*")
                 flour2_pct = st.number_input(
                     "Alternative flour (%)",
                     value=15.0,
