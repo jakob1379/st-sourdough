@@ -67,12 +67,32 @@ def build_recipe_items(
 
 @st.cache_data
 def ferment_df_from_items(items: tuple[tuple[str, float], ...]) -> pd.DataFrame:
-    """Convert ferment items (tuple of pairs) into a small DataFrame suitable for display."""
+    """Convert ferment items (tuple of pairs) into a small DataFrame suitable for display.
+
+    items: tuple of (ingredient_name, weight)
+    """
     df = pd.DataFrame.from_dict(dict(items), orient="index", columns=["Weight (g)"])
     df = df[df["Weight (g)"] > 0.1]
     if not df.empty:
         df.loc["Total"] = df["Weight (g)"].sum()
     return df
+
+
+@st.cache_data
+def build_total_display(items: tuple[tuple[str, float, float], ...]) -> pd.DataFrame:
+    """Build the display DataFrame for total ingredients.
+
+    items: tuple of (ingredient_name, baker_pct, weight)
+    """
+    if not items:
+        return pd.DataFrame(columns=["Baker's %", "Weight (g)"])
+
+    df = pd.DataFrame(items, columns=["Ingredient", "Baker's %", "Weight (g)"]).set_index("Ingredient")
+    df = df[df["Weight (g)"] > 0.1]
+    if not df.empty:
+        df.loc["Total"] = [df["Baker's %"].sum(), df["Weight (g)"].sum()]
+    return df
+
 
 def render_app() -> None:
     """Render the Streamlit UI for the sourdough calculator.
