@@ -2,8 +2,77 @@ from __future__ import annotations
 
 import streamlit as st
 import pandas as pd
-from sourdough.calculations import calculate_recipe
+from sourdough.calculations import calculate_recipe, FermentsData
 
+# Cached wrappers for expensive or repeatable computations
+@st.cache_data
+def get_recipe_cached(
+    dough_weight: float,
+    sourdough_discard_pct: float,
+    preferment_pct: float,
+    scale: float,
+    flour2_pct: float,
+    flour3_pct: float,
+    water_pct: float,
+    salt_pct: float,
+    yeast_pct: float,
+    barley_malt_pct: float,
+    inclusion2_pct: float,
+    inclusion3_pct: float,
+    discard_flour_pct: float,
+    discard_water_pct: float,
+    preferment_flour_pct: float,
+    preferment_water_pct: float,
+    preferment_yeast_pct: float,
+) -> tuple[pd.DataFrame, pd.DataFrame, FermentsData, float, float, float]:
+    """Cached wrapper around the pure calculate_recipe function.
+
+    Keeping caching in the UI module keeps calculations.py importable without Streamlit.
+    """
+    return calculate_recipe(
+        dough_weight, sourdough_discard_pct, preferment_pct, scale,
+        flour2_pct, flour3_pct, water_pct, salt_pct, yeast_pct, barley_malt_pct,
+        inclusion2_pct, inclusion3_pct, discard_flour_pct, discard_water_pct,
+        preferment_flour_pct, preferment_water_pct, preferment_yeast_pct
+    )
+
+
+@st.cache_data
+def build_recipe_items(
+    main_items: tuple[tuple[str, float], ...],
+    flour2_pct: float,
+    flour3_pct: float,
+) -> dict[str, float]:
+    """Build user-friendly recipe items for the shopping list from stable, hashable input.
+
+    main_items must be a tuple of (ingredient_name, weight) pairs so it's hashable for caching.
+    """
+    recipe_items: dict[str, float] = {}
+    for ingredient, weight in main_items:
+        if weight > 1:  # Only show meaningful amounts
+            if ingredient == "Strong White flour":
+                recipe_items["Strong white bread flour"] = weight
+            elif ingredient == "Flour 2" and weight > 0:
+                recipe_items[f"Alternative flour ({flour2_pct:.0f}% of total)"] = weight
+            elif ingredient == "Sourdough discard":
+                recipe_items["Sourdough discard (100% hydration)"] = weight
+            elif ingredient == "Pre-ferment":
+                recipe_items["Pre-ferment (prepare night before)"] = weight
+            elif ingredient == "Barley Malt Extract" and weight > 0:
+                recipe_items["Barley malt extract (or honey)"] = weight
+            else:
+                recipe_items[ingredient] = weight
+    return recipe_items
+
+
+@st.cache_data
+def ferment_df_from_items(items: tuple[tuple[str, float], ...]) -> pd.DataFrame:
+    """Convert ferment items (tuple of pairs) into a small DataFrame suitable for display."""
+    df = pd.DataFrame.from_dict(dict(items), orient="index", columns=["Weight (g)"])
+    df = df[df["Weight (g)"] > 0.1]
+    if not df.empty:
+        df.loc["Total"] = df["Weight (g)"].sum()
+    return df
 
 def render_app() -> None:
     """Render the Streamlit UI for the sourdough calculator.
@@ -203,9 +272,9 @@ def render_app() -> None:
             **Sweet spot:** 20-23°C for predictable timing
             """)
 
-    # Calculate recipe
+    # Calculate recipe (cached)
     (total_ingredients_df, main_dough_df, ferments_data, pre_fermented_flour,
-     sourdough_discard_total_weight, preferment_total_weight) = calculate_recipe(
+     sourdough_discard_total_weight, preferment_total_weight) = get_recipe_cached(
         dough_weight, sourdough_discard_pct, preferment_pct, scale,
         flour2_pct, flour3_pct, water_pct, salt_pct, yeast_pct, barley_malt_pct,
         inclusion2_pct, inclusion3_pct, discard_flour_pct, discard_water_pct,
