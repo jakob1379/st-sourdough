@@ -31,3 +31,7 @@ Contributing
 
 Open a pull request with changes. Keep UI and calculation logic separated.
 
+Credits
+
+This calculator is based on the original formula and interface by Culinary Exploration (https://www.culinaryexploration.eu/). Please credit Culinary Exploration as the author of the original calculator when reusing or publishing derivatives.
+
